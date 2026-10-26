@@ -142,3 +142,48 @@ The script expects `BSB.json` structured like:
 * Async API is required for **python-telegram-bot v20+**.
 
 ---
+
+## Cloudflare Worker (ESV, no static file)
+
+`worker/` holds a Cloudflare Worker version. It fetches a random Psalm from the
+[ESV API](https://api.esv.org) each day, so `BSB.json` isn't needed. It runs on the
+Workers free plan using a Cron Trigger.
+
+1. Get a free ESV API key at https://api.esv.org (non-commercial use).
+2. Install Wrangler and log in:
+
+```bash
+npm install -g wrangler
+wrangler login
+```
+
+3. Set the secrets:
+
+```bash
+cd worker
+wrangler secret put TELEGRAM_TOKEN
+wrangler secret put CHAT_ID
+wrangler secret put ESV_API_KEY
+```
+
+4. Deploy:
+
+```bash
+wrangler deploy
+```
+
+The schedule is in `worker/wrangler.toml` (`crons`, in UTC; default `0 23 * * *` = 07:00 SGT).
+
+Test locally (put the same three values in `worker/.dev.vars` first):
+
+```bash
+wrangler dev --test-scheduled
+curl "http://localhost:8787/__scheduled?cron=0+23+*+*+*"
+```
+
+Long Psalms (e.g. 119) are split into several messages to stay under Telegram's
+4096-character limit. If the ESV or Telegram call fails, the run errors and shows as
+failed in the Cloudflare dashboard.
+
+ESV text: Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard
+Version®), © 2001 by Crossway. Used by permission. All rights reserved.
